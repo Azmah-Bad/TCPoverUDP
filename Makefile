@@ -19,4 +19,4 @@ clientUDP: out/clientUDP.o out/common.o
 	gcc ${LDLAGS} out/clientUDP.o out/common.o -o out/clientUDP
 
 clean: 
-	\rm -rf *.o out/server out/client out/clientUDP
+	\rm -rf out/*
