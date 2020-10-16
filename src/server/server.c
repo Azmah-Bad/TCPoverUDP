@@ -1,4 +1,4 @@
-#include "common.h"
+#include "../common/common.h"
 #include "server.h"
 
 int main(int argc, char const *argv[])

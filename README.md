@@ -2,6 +2,9 @@
 
 implmentation of TCP over a UDP socket in C
 
+## to build
+` > make`
+
 ## Features
 
 - [ ] Server - Client over UDP
