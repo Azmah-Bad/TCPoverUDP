@@ -1,5 +1,5 @@
 *.o
-bin/*
+out/*
 .dist
 .vscode
 server.dSYM
