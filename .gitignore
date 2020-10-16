@@ -3,3 +3,4 @@ out/*
 .dist
 .vscode
 server.dSYM
+.DS_Store
