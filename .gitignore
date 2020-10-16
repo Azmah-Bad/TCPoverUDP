@@ -4,3 +4,4 @@ out/*
 .vscode
 server.dSYM
 .DS_Store
+!.gitkeep
