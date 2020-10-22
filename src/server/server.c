@@ -69,6 +69,8 @@ int main(int argc, char const *argv[])
             return 1;
         }
 
+        sendFile(mSocketUDP, &clientAddress, clientLengthUDP);
+
         if ((recvfrom(mSocketUDP, userInput, RCVSIZE, 0, (struct sockaddr *)&clientAddress, (socklen_t *)&clientLengthUDP)) == -1)
         {
             perror("recvfrom failed \n");
@@ -115,4 +117,51 @@ int handshake(int mSocketUDP, struct sockaddr_in *clientAddress, int clientLengt
     }
 
     return 1;
+}
+
+int sendFile(int mSocketUDP, struct sockaddr_in *clientAddress, int clientLengthUDP)
+{
+    info("SENDFILE", "sending file...");
+    FILE *in_file = fopen("../assets/mock.pdf", "rb"); // read only
+
+    if (!in_file) // equivalent to saying if ( in_file == NULL )
+    {
+        printf("oops, file can't be read\n");
+        exit(-1);
+    }
+    fseek(in_file, 0L, SEEK_END);
+    long size = ftell(in_file) / 8;
+    rewind(in_file);
+
+    unsigned char buffer[1024];            //  to be sent bufffer
+    unsigned char fileBuffer[size];        // contains the whole file
+    bzero(buffer, sizeof(buffer));         //set to zero
+    bzero(fileBuffer, sizeof(fileBuffer)); //set to zero
+
+    fread(fileBuffer, sizeof(fileBuffer), 1, in_file);
+
+    // segment
+    long nbOfSegment = size / 1020;
+    for (int i = 0; i < nbOfSegment; i++)
+    {
+        buffer[0] = (char)i / 100;
+        buffer[1] = (char)(i / 100) % 10;
+        buffer[2] = (char)i % 10;
+        // buffer[3]="-";
+        for (int j = 0; j < 1020; j++)
+        {
+            buffer[j + 3] = fileBuffer[i * 1020 + j];
+            info("SENDFILE", "file segmented...");
+
+            if (sendto(mSocketUDP, buffer, sizeof(buffer), 0, clientAddress, clientLengthUDP) > 0)
+            {
+                info("SENDFILE", "segment sent 🎉...");
+            }
+            else
+            {
+                perror("[CONNECT] SYNACK couldn't be sent...\n");
+                return 0;
+            }
+        }
+    }
 }
