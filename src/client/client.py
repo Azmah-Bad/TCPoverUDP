@@ -17,11 +17,11 @@ def initSocket():
 def log(context, info):
     print(f"[{context}] {info}")
 
-def send(Socket,data):
+def send(Socket,port,data):
     if type(data) == str:
-        Socket.sendto(str.encode(data), ADDRESS)
+        Socket.sendto(str.encode(data), (HOST, port))
     else:
-        Socket.sendto(data, ADDRESS)
+        Socket.sendto(data,(HOST, port))
 
 
 def rcv(Socket, bufferSize):
@@ -29,9 +29,8 @@ def rcv(Socket, bufferSize):
     
     
 def handshake(ClientSocket):
-  
-    handshakeBuffer = 6
-    send(ClientSocket, "SYN")
+    handshakeBuffer = 12
+    send(ClientSocket, PORT,"SYN")
     log("HANDSHAKE", f"SYN sent ")
     
     message, _ = rcv(ClientSocket, handshakeBuffer)
@@ -40,14 +39,23 @@ def handshake(ClientSocket):
     else:
         raise ConnectionRefusedError
     
-    send(ClientSocket, "ACK")
+    send(ClientSocket, PORT,"ACK")
     log("HANDSHAKE", f"ACK sent ")
-    
+
+
+def changePort(ClientSocket):
+    message, _ = rcv(ClientSocket, 6)
+    dataPort = int(message)
+    return dataPort
+
 
 def client():
-    ClientSocket = initSocket()
+    ClientSocket = initSocket()  
     handshake(ClientSocket)
     log("HANDSHAKE", "3 way handshake completed 🤝")
+
+    dataPort = changePort(ClientSocket)
+    log("CHANGE_PORT", f"data port on {dataPort}")
 
     
 if __name__ == "__main__":
