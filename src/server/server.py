@@ -15,7 +15,7 @@ HOST = "127.0.0.1"
 FILE_NAME = "mock.pdf"
 FILE_PATH = "../../assets/" + FILE_NAME
 SEGMENT_SIZE = 1000
-RTT = 0.0489288
+RTT = 1 #0.0489288
 
 
 def log(context, info):
@@ -86,41 +86,51 @@ def sendFile(filePath:str, ServerSocket , clientPort):
 
     segments = [file[x:x+SEGMENT_SIZE] for x in range(0,len(file),SEGMENT_SIZE)]
     
+    for index ,segment in enumerate(segments):
+        segments[index] = str(index).zfill(20).encode() + segment
     
     log("SEND_FILE",f"File segmented into {len(file)//SEGMENT_SIZE} segment")
 
     # send header 
     send(ServerSocket ,clientPort, FILE_NAME + f"-{fileSize}")
     log("SEND_FILE","File name and size sent")
+    CWindow = 1
     times = []
-    for index , segment in enumerate(segments):
-        segments[index] = str(index).zfill(20).encode() + segment
+    index = 0
+    LastACK = 0
+    while index < len(segments):
+        segment = segments[index]
+        remainingSegments = len(segments[index:]) 
+        if remainingSegments < CWindow:
+            CWindow = remainingSegments
         start = time.time()
-        if (index!= 2):
-            send(ServerSocket, clientPort, segments[index])
-            # log("SEND_FILE",f"Segment {index} sent")
-
-        try:
-            func_timeout(RTT,ackHandler,(ServerSocket,clientPort,index,segments))
-        except FunctionTimedOut:
-            log("SEND_FILE", f"segment {index} not acked 😭")
-            send(ServerSocket, clientPort, segments[index])
-
+        FlightSize = range(index, index + CWindow)
+        for segIG in FlightSize:
+            send(ServerSocket, clientPort, segments[segIG])
+            log("SLOW_START" , f"Sending segment {segIG}")
+        index += CWindow
+        for _ in FlightSize:
+            try:
+                LastACK = func_timeout(RTT,ackHandler,(ServerSocket,))
+                CWindow += 1
+            except FunctionTimedOut:  # dropedd a segment 
+                log("SEND_FILE", f"segment {index} not acked 😭")
+                CWindow = 1 # reset the CWindow 
+                send(ServerSocket, clientPort, segments[LastACK + 1])  # resend the lost segment 
+        
+        log("SLOW_START" , f"CWindow: {CWindow}")
         end = time.time()
         times.append(end - start)
-    log("RTT" , f"Estimated RTT {sum(times) / len(times)}")
+    log("SLOW_START" , f"Estimated RTT {sum(times) / len(times)}")
     log("SEND_FILE","File sent")
         
 
-def ackHandler(ServerSocket,clientPort,index,segments):
+def ackHandler(ServerSocket):
     # check for ACK 
     rcvACK, _ = rcv(ServerSocket, 8)
     log('SEND_FILE', f'ACK: recieved ACK {rcvACK}')
 
-    rcvACK = int((rcvACK).decode()[4:])
-    if rcvACK != index:
-        log('SEND_FILE', f'Failed to send segment {index}, resending it.')
-        send(ServerSocket, clientPort, segments[index] )
+    return int((rcvACK).decode()[4:])
 
 
 def server():

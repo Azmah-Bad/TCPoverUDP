@@ -11,8 +11,8 @@ implmentation of TCP over a UDP socket in C
 - [X] 3 way handshake
 - [X] accept()
 - [X] segmentation
-- [ ] ACK
-- [ ] slow start
+- [X] ACK
+- [X] slow start
 - [ ] Congestion Avoidance
 - [ ] Fast retransmit
 - [ ] Fast recovery
