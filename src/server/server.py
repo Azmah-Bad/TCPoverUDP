@@ -15,7 +15,7 @@ HOST = "127.0.0.1"
 FILE_NAME = "mock.pdf"
 FILE_PATH = "../../assets/" + FILE_NAME
 SEGMENT_SIZE = 1000
-RTT = 1 #0.0489288
+RTT = 0.0489288
 
 
 def log(context, info):
@@ -78,16 +78,18 @@ def changePort(ServerSocket,clientPort):
     return dataSocket
 
 
+def getSegments(data):
+    """return segmen"""
+    return [str(x//SEGMENT_SIZE).zfill(20).encode() + data[x:x+SEGMENT_SIZE] for x in range(0,len(data),SEGMENT_SIZE)]
+
+
 def sendFile(filePath:str, ServerSocket , clientPort):
     fileSize = os.path.getsize(filePath)
     with open(filePath,"rb") as f:
         file = f.read()
     log("SEND_FILE","File loaded")
 
-    segments = [file[x:x+SEGMENT_SIZE] for x in range(0,len(file),SEGMENT_SIZE)]
-    
-    for index ,segment in enumerate(segments):
-        segments[index] = str(index).zfill(20).encode() + segment
+    segments = getSegments(file)
     
     log("SEND_FILE",f"File segmented into {len(file)//SEGMENT_SIZE} segment")
 
@@ -107,7 +109,7 @@ def sendFile(filePath:str, ServerSocket , clientPort):
         FlightSize = range(index, index + CWindow)
         for segIG in FlightSize:
             send(ServerSocket, clientPort, segments[segIG])
-            log("SLOW_START" , f"Sending segment {segIG}")
+            # log("SLOW_START" , f"Sending segment {segIG}")
         index += CWindow
         for _ in FlightSize:
             try:
@@ -128,7 +130,7 @@ def sendFile(filePath:str, ServerSocket , clientPort):
 def ackHandler(ServerSocket):
     # check for ACK 
     rcvACK, _ = rcv(ServerSocket, 8)
-    log('SEND_FILE', f'ACK: recieved ACK {rcvACK}')
+    # log('SEND_FILE', f'ACK: recieved ACK {rcvACK}')
 
     return int((rcvACK).decode()[4:])
 
