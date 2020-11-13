@@ -5,3 +5,5 @@ out/*
 server.dSYM
 .DS_Store
 !.gitkeep
+venv
+src/client/rcv_mock.pdf

@@ -7,10 +7,10 @@ implmentation of TCP over a UDP socket in C
 
 ## Features
 
-- [ ] Server - Client over UDP
-- [ ] 3 way handshake
-- [ ] accept()
-- [ ] segmentation
+- [X] Server - Client over UDP
+- [X] 3 way handshake
+- [X] accept()
+- [X] segmentation
 - [ ] ACK
 - [ ] slow start
 - [ ] Congestion Avoidance

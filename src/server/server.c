@@ -142,26 +142,30 @@ int sendFile(int mSocketUDP, struct sockaddr_in *clientAddress, int clientLength
 
     // segment
     long nbOfSegment = size / 1020;
+    char header[18];
+    sprintf(header, "SEND:PDF:%d", size);
+    sendto(mSocketUDP, header, sizeof(header), 0, clientAddress, clientLengthUDP);
+
     for (int i = 0; i < nbOfSegment; i++)
     {
         buffer[0] = (char)i / 100;
         buffer[1] = (char)(i / 100) % 10;
         buffer[2] = (char)i % 10;
-        // buffer[3]="-";
+
         for (int j = 0; j < 1020; j++)
         {
             buffer[j + 3] = fileBuffer[i * 1020 + j];
-            info("SENDFILE", "file segmented...");
+        }
+        info("SENDFILE", "file segmented...");
 
-            if (sendto(mSocketUDP, buffer, sizeof(buffer), 0, clientAddress, clientLengthUDP) > 0)
-            {
-                info("SENDFILE", "segment sent 🎉...");
-            }
-            else
-            {
-                perror("[CONNECT] SYNACK couldn't be sent...\n");
-                return 0;
-            }
+        if (sendto(mSocketUDP, buffer, sizeof(buffer), 0, clientAddress, clientLengthUDP) > 0)
+        {
+            info("SENDFILE", "segment sent 🎉...");
+        }
+        else
+        {
+            perror("[CONNECT] SYNACK couldn't be sent...\n");
+            return 0;
         }
     }
 }
