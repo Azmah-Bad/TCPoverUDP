@@ -1,9 +1,10 @@
 # TCP in UDP
 
-implmentation of TCP over a UDP socket in C
+implmentation of TCP over a UDP socket in C and Python
 
 ## to build
 ` > make`
+or just run the python script after installing requirements `pip install -r requirements.txt` then lauch `server` after that start  `client`
 
 ## Features
 
@@ -13,8 +14,12 @@ implmentation of TCP over a UDP socket in C
 - [X] segmentation
 - [X] ACK
 - [X] slow start
-![image](./slowstart packets sent by time.png)
-<div style="text-align: center">Congestion window by time (a segment was lost in the middle) </div>- [ ] Congestion Avoidance
+
+![](https://github.com/Azmah-Bad/TCPoverUDP/blob/master/slowstart%20packets%20sent%20by%20time.png)
+
+# Congestion window by time (a segment was lost in the middle)
+
+- [ ] Congestion Avoidance
 - [ ] Fast retransmit
 - [ ] Fast recovery
 - [ ] Selective ACK
