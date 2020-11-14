@@ -1,14 +1,15 @@
-import socket 
+import socket
 import sys
 import random
 import os
 from func_timeout import func_timeout, FunctionTimedOut
 import time
+import matplotlib.pyplot as plt
+import progressbar
 
 if len(sys.argv) != 2:
     print("python3 client.py <Port>")
     raise AttributeError
-
 
 PORT = int(sys.argv[1])
 HOST = "127.0.0.1"
@@ -23,22 +24,22 @@ def log(context, info):
 
 
 def initSocket():
-    ServerSocket = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM) # create UDP socket
-    ServerSocket.bind((HOST,PORT)) # bind the socket to an address
+    ServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)  # create UDP socket
+    ServerSocket.bind((HOST, PORT))  # bind the socket to an address
     log("INIT_SOCKET", "Socket binded with success")
     return ServerSocket
 
 
-def send(Socket,port,data):
+def send(Socket, port, data):
     if type(data) == str:
-        Socket.sendto(str.encode(data), (HOST,port))
+        Socket.sendto(str.encode(data), (HOST, port))
     else:
-        Socket.sendto(data, (HOST,port))
+        Socket.sendto(data, (HOST, port))
 
 
 def rcv(Socket, bufferSize):
     return Socket.recvfrom(bufferSize)
-  
+
 
 def handshake(ServerSocket):
     handshakeBuffer = 12
@@ -61,18 +62,17 @@ def handshake(ServerSocket):
     return clientPort
 
 
-def changePort(ServerSocket,clientPort):
+def changePort(ServerSocket, clientPort):
     # Changing port
     while True:
         try:
             DataPort = random.randint(PORT, 65535)
-            dataSocket = socket.socket(family=socket.AF_INET,type=socket.SOCK_DGRAM) # create UDP socket
-            dataSocket.bind((HOST,DataPort)) # bind the socket to an address
+            dataSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)  # create UDP socket
+            dataSocket.bind((HOST, DataPort))  # bind the socket to an address
             break
-        except :
+        except:
             log("HANDSHAKE", "Port already in use")
-            
-    
+
     log("HANDSHAKE", f"New connection port {DataPort}")
     send(ServerSocket, clientPort, str(DataPort))
     return dataSocket
@@ -80,52 +80,67 @@ def changePort(ServerSocket,clientPort):
 
 def getSegments(data):
     """return segmen"""
-    return [str(x//SEGMENT_SIZE).zfill(20).encode() + data[x:x+SEGMENT_SIZE] for x in range(0,len(data),SEGMENT_SIZE)]
+    return [str(x // SEGMENT_SIZE).zfill(20).encode() + data[x:x + SEGMENT_SIZE] for x in
+            range(0, len(data), SEGMENT_SIZE)]
 
 
-def sendFile(filePath:str, ServerSocket , clientPort):
+def sendFile(filePath: str, ServerSocket, clientPort):
     fileSize = os.path.getsize(filePath)
-    with open(filePath,"rb") as f:
+    with open(filePath, "rb") as f:
         file = f.read()
-    log("SEND_FILE","File loaded")
+    log("SEND_FILE", "File loaded")
 
-    segments = getSegments(file)
-    
-    log("SEND_FILE",f"File segmented into {len(file)//SEGMENT_SIZE} segment")
+    segments = getSegments(file)  # segment the files 
+
+    log("SEND_FILE", f"File segmented into {len(file) // SEGMENT_SIZE} segment")
 
     # send header 
-    send(ServerSocket ,clientPort, FILE_NAME + f"-{fileSize}")
-    log("SEND_FILE","File name and size sent")
-    CWindow = 1
-    times = []
+    send(ServerSocket, clientPort, FILE_NAME + f"-{fileSize}")
+    log("SEND_FILE", "File name and size sent")
+    CWindow = 1  # COngestion Window
+    rtts = []
     index = 0
     LastACK = 0
-    while index < len(segments):
-        segment = segments[index]
-        remainingSegments = len(segments[index:]) 
-        if remainingSegments < CWindow:
-            CWindow = remainingSegments
-        start = time.time()
-        FlightSize = range(index, index + CWindow)
-        for segIG in FlightSize:
-            send(ServerSocket, clientPort, segments[segIG])
-            # log("SLOW_START" , f"Sending segment {segIG}")
-        index += CWindow
-        for _ in FlightSize:
-            try:
-                LastACK = func_timeout(RTT,ackHandler,(ServerSocket,))
-                CWindow += 1
-            except FunctionTimedOut:  # dropedd a segment 
-                log("SEND_FILE", f"segment {index} not acked 😭")
-                CWindow = 1 # reset the CWindow 
-                send(ServerSocket, clientPort, segments[LastACK + 1])  # resend the lost segment 
-        
-        log("SLOW_START" , f"CWindow: {CWindow}")
-        end = time.time()
-        times.append(end - start)
-    log("SLOW_START" , f"Estimated RTT {sum(times) / len(times)}")
-    log("SEND_FILE","File sent")
-        
+    CwndLogs = []
+    widgets = [
+        ' [', progressbar.Timer(), '] ',
+        progressbar.Bar("=","[","]"),
+        ' (', progressbar.ETA(), ') ',
+    ]
+    with progressbar.ProgressBar(max_value=len(segments), redirect_stdout=True,widgets=widgets) as bar:
+        while index < len(segments):
+            CwndLogs.append(CWindow)
+            segment = segments[index]
+            remainingSegments = len(segments[index:])
+            if remainingSegments < CWindow:
+                CWindow = remainingSegments
+            start = time.time()
+            FlightSize = range(index, index + CWindow)
+            for segIG in FlightSize:
+                if segIG != 40:
+                    send(ServerSocket, clientPort, segments[segIG])
+                # log("SLOW_START" , f"Sending segment {segIG}")
+            index += CWindow
+            for _ in FlightSize:
+                try:
+                    LastACK = func_timeout(RTT, ackHandler, (ServerSocket,))
+                    CWindow += 1
+                except FunctionTimedOut:  # dropedd a segment
+                    log("SEND_FILE", f"segment {index} not acked 😭")
+                    CWindow = 1  # reset the CWindow
+                    send(ServerSocket, clientPort, segments[LastACK + 1])  # resend the lost segment
+
+            log("SLOW_START", f"CWindow: {CWindow}")
+            end = time.time()
+            rtts.append(end - start)
+            bar.update(index)
+            time.sleep(0.5)
+        log("SLOW_START", f"Estimated RTT {int((sum(rtts) / len(rtts)) * 1000)} ms")
+        log("SLOW_START", f"Total time to send file {int(sum(rtts) * 1000)} ms ")
+
+    plt.plot(CwndLogs)
+    plt.show()
+
 
 def ackHandler(ServerSocket):
     # check for ACK 
@@ -144,5 +159,6 @@ def server():
 
     sendFile(FILE_PATH, ServerSocket, clientPort)
 
+
 if __name__ == "__main__":
-    server()    
+    server()

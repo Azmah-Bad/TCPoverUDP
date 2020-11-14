@@ -13,7 +13,9 @@ implmentation of TCP over a UDP socket in C
 - [X] segmentation
 - [X] ACK
 - [X] slow start
-- [ ] Congestion Avoidance
+![image](./slowstart packets sent by time.png)
+<div style="text-align: center">Congestion window by time (a segment was lost in the middle) </div>- [ ] Congestion Avoidance
 - [ ] Fast retransmit
 - [ ] Fast recovery
 - [ ] Selective ACK
+
